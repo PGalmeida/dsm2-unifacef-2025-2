@@ -1,116 +1,107 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  SectionList,
-  TextInput,
-  StyleSheet,
-  SafeAreaView,
-} from "react-native";
-
-const produtos = [
-  { nome: "Notebook", preco: 4500, categoria: "Eletrônicos" },
-  { nome: "Smartphone", preco: 2500, categoria: "Eletrônicos" },
-  { nome: "TV 50\"", preco: 3800, categoria: "Eletrônicos" },
-  { nome: "Camiseta", preco: 80, categoria: "Roupas" },
-  { nome: "Calça Jeans", preco: 150, categoria: "Roupas" },
-  { nome: "Jaqueta", preco: 300, categoria: "Roupas" },
-  { nome: "Sofá", preco: 1800, categoria: "Móveis" },
-  { nome: "Mesa de Jantar", preco: 2200, categoria: "Móveis" },
-  { nome: "Cadeira", preco: 350, categoria: "Móveis" },
-];
-
-function agruparPorCategoria(lista) {
-  const categorias = {};
-
-  lista.forEach((item) => {
-    if (!categorias[item.categoria]) {
-      categorias[item.categoria] = [];
-    }
-    categorias[item.categoria].push(item);
-  });
-
-  return Object.keys(categorias).map((categoria) => ({
-    title: categoria,
-    data: categorias[categoria],
-  }));
-}
+import React from 'react';
+import { SectionList, Text, View, StyleSheet, TextInput, useWindowDimensions } from 'react-native';
+import dados from './data/dados'
 
 export default function App() {
-  const [busca, setBusca] = useState("");
 
-  const produtosFiltrados = produtos.filter((p) =>
-    p.nome.toLowerCase().includes(busca.toLowerCase())
-  );
+  const { width, height } = useWindowDimensions()
 
-  const dadosAgrupados = agruparPorCategoria(produtosFiltrados);
+  const [lista, setLista] = React.useState(() => dados)
+  const [filtro, setFiltro] = React.useState('')
+
+  const handleFilter = React.useCallback((text) => {
+    setFiltro(text)
+    if (!text) {
+      setLista(dados)
+      return
+    }
+    const q = text.toLowerCase()
+    const filtered = dados
+      .map(section => {
+        const data = section.data.filter(item =>
+          item.nome.toLowerCase().includes(q)
+        )
+        return { ...section, data }
+      })
+      .filter(section => section.data.length > 0)
+
+    setLista(filtered)
+  }, [setFiltro, setLista])
+
+  const renderItem = React.useCallback(({ item }) => (
+    <Text style={styles.item}>
+      {item.nome} ({item.preco.toLocaleString('pt-BR', { style: "currency", currency: "BRL" })})
+    </Text>
+  ), [])
+
+  const renderSectionHeader = React.useCallback(({ section }) => (
+    <Text style={styles.header}>{section.categoria}</Text>
+  ), [])
+
+  const keyExtractor = React.useCallback((item) => item.id.toString(), [])
+
+  const containerStyle = React.useMemo(() => {
+    const isWide = width >= 600
+    return [
+      styles.container,
+      {
+        paddingHorizontal: isWide ? 24 : 12,
+        paddingTop: isWide ? 20 : 12,
+      }
+    ]
+  }, [width])
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.titulo}>Catálogo Interativo de Produtos</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Pesquisar produto..."
-        value={busca}
-        onChangeText={setBusca}
-      />
-
+    <View style={containerStyle}>
+      <View style={styles.filter}>
+        <Text style={styles.label}>Filtrar:</Text>
+        <TextInput 
+          style={styles.textInput} 
+          value={filtro}
+          onChangeText={handleFilter}
+        />
+      </View>
       <SectionList
-        sections={dadosAgrupados}
-        keyExtractor={(item, index) => item.nome + index}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <Text style={styles.nome}>{item.nome}</Text>
-            <Text style={styles.preco}>R$ {item.preco.toFixed(2)}</Text>
-          </View>
-        )}
-        renderSectionHeader={({ section: { title } }) => (
-          <Text style={styles.header}>{title}</Text>
-        )}
+        sections={lista}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
       />
-    </SafeAreaView>
+    </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: "#f8f9fa",
+    flexDirection: 'column'
   },
-  titulo: {
-    fontSize: 22,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 12,
+  filter: {
+    flexDirection: 'row',
+    backgroundColor: '#ccc',
+    padding: 15,
+    height: 64
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
+  label: {
+    marginBottom: 8,
+    marginTop: 8,
+    marginRight: 8,
+  },
+  textInput: {
+    borderWidth: 1, 
+    borderColor: '#888', 
+    marginBottom: 8,
+    marginTop: 8, 
+    padding: 10, 
     borderRadius: 8,
-    padding: 10,
-    marginBottom: 16,
-    backgroundColor: "#fff",
+    backgroundColor: 'white'
   },
   header: {
-    fontSize: 18,
-    fontWeight: "bold",
-    backgroundColor: "#e9ecef",
+    fontSize: 20,
+    backgroundColor: '#eee',
     padding: 8,
-    borderRadius: 6,
+    fontWeight: 'bold',
   },
   item: {
-    backgroundColor: "#fff",
     padding: 10,
-    marginVertical: 4,
-    borderRadius: 8,
-  },
-  nome: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  preco: {
-    color: "gray",
   },
 });
